@@ -1,0 +1,22 @@
+import ollama #burada C'deki include gibi ollamayı import ediyorum
+
+
+
+response = ollama.chat(
+
+    model = "gemma3:4b", #burada kullanacağım modeli seçtim
+    keep_alive = "10m", #burada modelimin ekran kartımda ne kadar süre ayakta kalması gerektiği bilgisini verdim
+
+
+    messages= [
+
+        {"role": "system", "content": "your are an asistant. You asist about industry and technology data"},
+        {"role": "user", "content": "Hi, it is a test message !"}
+
+    ]
+
+)   
+
+print(response) #tüm metrik verilerini ve modelden dönen cevabı basar
+print("\n*************************************************************************************************...")
+print(response.message.content) #sadece modelden dönen cevabı basar
