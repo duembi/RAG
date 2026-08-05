@@ -51,6 +51,48 @@ Son Soru: "bunların en büyüğü hangisi"
 Doğru Çıktı: "Kayseri'deki OSB'ler arasında en büyük olanı hangisidir?"
 
 """
+
+system_prompt_meta_check = """
+
+    Sen, bir sınıflandırma asistanısın. Görevin, kullanıcıdan gelen bir sorunun İKİ KATEGORİDEN hangisine ait olduğuna karar vermek. Cevap ÜRETMEYECEKSİN, sadece sınıflandırma yapacaksın.
+
+    KATEGORİLER:
+
+    1. VERİ SORUSU: Soru, OSB (Organize Sanayi Bölgesi), parsel, sicil no, sektör, istihdam, fabrika sayısı gibi somut bilgi/veri talep ediyor. Bu sorular vektör veritabanından belge aramayı gerektirir.
+    Örnekler: "Kayseri'de tekstil sektöründe faaliyet gösteren OSB'ler hangileri?", "orada kaç fabrika var?", "en çok boş parseli olan OSB hangisi?"
+
+    2. META-SORU: Soru, OSB/parsel verisiyle değil, bu SOHBETİN KENDİSİYLE ilgilidir — yani kullanıcı, daha önce ne sorduğunu, sana neyi konuştuğunuzu, önceki mesajları hatırlamanı istiyor. Bu sorular belge aramayı GEREKTİRMEZ, çünkü cevap zaten konuşma geçmişinde mevcuttur.
+    Örnekler: "Az önce sana ne sordum?", "daha önce hangi OSB'den bahsettik?", "ilk sorum neydi?", "bu konuşmada neler konuştuk?", "önceki cevabını tekrar eder misin?"
+
+    KESİN KURALLAR:
+
+    1. Cevabın SADECE şu iki kelimeden biri olmalı: "EVET" (eğer META-SORU ise) veya "HAYIR" (eğer VERİ SORUSU ise).
+
+    2. Başka HİÇBİR açıklama, yorum, noktalama işareti veya ek kelime YAZMA. Çıktın tam olarak "EVET" ya da "HAYIR" olmalı, başka bir şey değil.
+
+    3. Emin olamadığın durumlarda (soru hem veri hem geçmişle ilgili gibi görünüyorsa, örneğin "orada kaç fabrika var?" gibi zamir içeren ama veri talep eden sorular), "HAYIR" (VERİ SORUSU) olarak sınıflandır — çünkü bu tür sorular aslında zamir çözümlemesiyle (sorgu iyileştirme adımıyla) ele alınıyor, meta-soru değildir.
+
+    Örnekler:
+
+    Soru: "Az önce sana hangi soruları sordum?"
+    Çıktı: EVET
+
+    Soru: "Kayseri'de tekstil sektöründe faaliyet gösteren OSB'ler hangileri?"
+    Çıktı: HAYIR
+
+    Soru: "Orada kaç fabrika var?"
+    Çıktı: HAYIR
+
+    Soru: "Biraz önce konuştuğumuz OSB'nin adı neydi?"
+    Çıktı: EVET
+
+"""
+
+
+
+
+
+
 chroma_client = chromadb.PersistentClient(path="./")
 
 sentence_transformer_model = "distiluse-base-multilingual-cased-v1"
@@ -60,7 +102,7 @@ embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(mo
 chroma_collection = chroma_client.get_collection("rag_chunks", embedding_function=embedding_function)
 
 
-def retrieveDocs(chroma_collection, query, n_results=5):
+def retrieveDocs(chroma_collection, query, n_results=10):
     ans = chroma_collection.query(
         query_texts=[query],
         include=["documents", "metadatas", "distances"],
@@ -120,19 +162,47 @@ def generate_query_enhancement(user_input, messages):
     llm_ans = new_response.message.content            
     return llm_ans
 
+def is_meta_question(user_input):
 
+    mqmessages = [
+
+    {"role" : "system", "content" : system_prompt_meta_check},
+    {"role" : "user", "content" : user_input}
+
+        
+    ]
+
+    ans = ollama.chat(model = "gemma3:4b", messages = mqmessages)
+
+    if "EVET" in ans.message.content:
+        return True
+    else:
+        return False
+
+         
 while True:
 
     user_input = input("Nasıl yardımcı olabilirim? (Çıkmak için Q yazınız): ")
 
-    if user_input == "Q":
+    if user_input == "Q" or user_input == "q":
         print("Çıkış Yapılıyor..s")
         break
-    enhanced_query = generate_query_enhancement(user_input, messages)
-    print(enhanced_query)
-    result = retrieveDocs(chroma_collection, enhanced_query)
+         
 
-    chunks = show_results(result)
+    if is_meta_question(user_input):
+        chunks = "Bu soru için belge erişimi yapılmadı, konuşma geçmişine bakınız."
+
+    else:    
+        enhanced_query = generate_query_enhancement(user_input, messages)
+
+        if "?" in enhanced_query:
+            result = retrieveDocs(chroma_collection, enhanced_query)
+        else:
+            result = retrieveDocs(chroma_collection, user_input)      
+            
+
+        print(enhanced_query)
+        chunks = show_results(result)
 
     user_prompt = f"""
 ### Kullanıcı Sorusu:
@@ -150,3 +220,7 @@ while True:
     print(f"\n{llm_answer}\n")
 
     messages.append({"role": "assistant", "content": llm_answer})
+
+
+
+             
