@@ -22,6 +22,11 @@ Kurallar:
 
 6. Sana verilen belge parçaları (context), bir arama sisteminden otomatik olarak geliyor ve bu sistem bazen soruyla alakasız belgeler getirebilir (örneğin isim/kelime benzerliği yüzünden — "Mars" ile "Mardin" gibi). Bu yüzden, context'te gördüğün her belgeyi otomatik olarak doğru eşleşme SAYMA. Önce belgenin, sorudaki konu/isim/yer ile GERÇEKTEN ilgili olup olmadığını değerlendir. İlgili değilse o belgeyi tamamen yok say ve sanki context'te hiç yokmuş gibi davran. Belgelerin hiçbiri soruyla ilgili değilse, kural 4'teki gibi "Bu sorunun cevabı elimdeki belgelere göre verilemiyor" de.
 
+7. Sana verilen belge parçalarında iki farklı kayıt türü olabilir: ÖZET kayıtları ve SEKTÖR kayıtları (her parçanın başında bu bilgi açıkça belirtilir). Bu ikisini KESİNLİKLE birbirine karıştırma:
+   - "Toplam İstihdam" alanı, sadece ÖZET kayıtlarında bulunur ve o OSB'nin GERÇEK, GÜNCEL toplam istihdamını gösterir. Kullanıcı bir OSB'nin şu anki/mevcut/toplam istihdamını sorduğunda SADECE bu alanı kullan.
+   - ÖZET kayıtlarında ayrıca "Öngörü İstihdam" adında BAŞKA bir alan daha bulunur. Bu alan, OSB'nin GELECEKTEKİ tahmini/hedef istihdamıdır — GÜNCEL durumu YANSITMAZ. "Toplam İstihdam" ile "Öngörü İstihdam" birbirinden tamamen farklı iki alandır, ASLA birbirinin yerine kullanma veya karıştırma. Kullanıcı açıkça "öngörü", "tahmini", "hedef" gibi bir ifade kullanmadıkça, cevabında SADECE "Toplam İstihdam" alanını esas al.
+   - "istihdam" alanı, SEKTÖR kayıtlarında bulunur ve sadece o sektöre özeldir — bir OSB'nin birden fazla sektör kaydı olabilir, bunların "istihdam" değerlerini toplayarak OSB'nin toplam istihdamını hesaplamaya ÇALIŞMA, bu yanlış bir sonuç verir. Bir OSB'nin toplam istihdamını söylemen gerektiğinde SADECE o OSB'ye ait ÖZET kaydındaki "Toplam İstihdam" alanını kullan.
+   - Aynı "osb_adi" değerine (örneğin "Ankara OSB") sahip olsalar bile, farklı "Sicil No" değerine sahip kayıtlar FARKLI OSB'lerdir. Bunları asla aynı OSB gibi değerlendirip toplama; her Sicil No'yu ayrı bir bölge olarak ele al ve cevabında hangi sayının hangi Sicil No'ya ait olduğunu net şekilde ayır.
 Bu kural YALNIZCA sana gerçek belge parçaları verildiğinde (yani "Kaynak: ... Sicil No: ..." formatında somut kayıtlar gördüğünde) geçerlidir. Eğer "Erişilen Belgeler" bölümünde bunun yerine "Bu soru için belge erişimi yapılmadı, konuşma geçmişine bakınız" gibi bir metin görüyorsan, bu kuralı UYGULAMA. Böyle bir durumda belge aramıyorsun; bunun yerine bu konuşmadaki önceki kullanıcı mesajlarına ve senin verdiğin cevaplara bakarak soruyu cevapla.
 """
 
@@ -97,6 +102,11 @@ sqlitedb_client = sqlite3.connect("chatbot.db")
 cursor = sqlitedb_client.cursor()
 
 
+# 'users' tablosunu oluşturuyorum: her kullanıcıyı tek bir satırda temsil edecek
+# id: her kullanıcıya otomatik atanan benzersiz numara
+# username: kullanıcının adı (boş bırakılamaz, NOT NULL)
+# date: kullanıcının oluşturulma tarihi
+# IF NOT EXISTS sayesinde, bu kod tekrar çalıştırılsa bile tablo zaten varsa hata vermez, sessizce atlar
 cursor.execute("""
 
     CREATE TABLE IF NOT EXISTS users (
@@ -108,9 +118,14 @@ cursor.execute("""
     )
 
 """)
-sqlitedb_client.commit()
+sqlitedb_client.commit() # değişikliği kalıcı hale getiriyorum, commit olmadan tablo diske yazılmış sayılmaz
 
 
+
+# 'conversations' tablosunu oluşturuyorum: her bir sohbet oturumunu (konuşmayı) temsil edecek
+# id: her konuşmaya otomatik atanan benzersiz numara
+# user_id: bu konuşmanın hangi kullanıcıya ait olduğunu belirtir (users tablosundaki id'ye karşılık gelir)
+# start_date: konuşmanın başladığı tarih
 cursor.execute("""
 
     CREATE TABLE IF NOT EXISTS conversations(
@@ -125,6 +140,13 @@ cursor.execute("""
 sqlitedb_client.commit()
 
 
+
+# 'messages' tablosunu oluşturuyorum: her tek mesajı (kullanıcı ya da asistan) temsil edecek
+# id: her mesaja otomatik atanan benzersiz numara
+# conversation_id: bu mesajın hangi konuşmaya ait olduğunu belirtir (conversations tablosundaki id'ye karşılık gelir)
+# role: mesajı kimin gönderdiği ("system" / "user" / "assistant")
+# content: mesajın asıl metni
+# timestamp: mesajın gönderildiği zaman
 cursor.execute(""" 
 
     CREATE TABLE IF NOT EXISTS messages(
@@ -165,12 +187,23 @@ def show_results(ans):
     metadatas = ans['metadatas'][0]
     distances = ans['distances'][0]
 
+    
+
     for i, doc in enumerate(documents):
         print(metadatas[i])
         print(distances[i])
-        if distances[i] > DISTANCE_THRISHOLD:
+        if distances[i] > DISTANCE_THRISHOLD :
             continue
-        output += f"Metin Parçası No: {i+1}\nKaynak: {metadatas[i]['osb_adi']} (Sicil No: {metadatas[i]['sicil_no']}, Dönem: {metadatas[i]['donem']})\n{doc}\n"
+
+        if metadatas[i].get('tur') == "osb_ozet":
+            tur_aciklamasi = "Bu bir ÖZET kaydıdır. Bu OSB'nin genel/toplam istihdamı 'Toplam İstihdam' alanındadır."
+
+        elif metadatas[i].get('tur') == 'osb_sektor' :
+            tur_aciklamasi = "Bu bir SEKTÖR kaydıdır. Buradaki 'istihdam' değeri sadece bu sektöre özeldir, OSB'nin toplam istihdamı DEĞİLDİR, toplama katma." 
+
+        else:
+            tur_aciklamasi = ""
+        output += f"Metin Parçası No: {i+1}\nKaynak: {metadatas[i]['osb_adi']} (Sicil No: {metadatas[i]['sicil_no']}, Dönem: {metadatas[i]['donem']})\n{tur_aciklamasi}\n{doc}\n"
 
     if output == "":
         output = "Sorguyla yeterince ilgili bir belge bulunamadı !!"
@@ -179,6 +212,8 @@ def show_results(ans):
 
 
 messages = [ ]
+
+
 
 
 def format_history(messages):
@@ -227,15 +262,26 @@ def is_meta_question(user_input):
     else:
         return False
 
+#dt = str(datetime.datetime.now())
+#cursor.execute("INSERT INTO conversations (user_id, start_date) VALUES (?,?)", (1, dt))                                                      
+#sqlitedb_client.commit()
+#current_conversation_id = cursor.lastrowid
 
+
+#cursor.execute("INSERT INTO messages (conversation_id, role, content, timestamp) VALUES (?,?,?,?)", (current_conversation_id, "system", system_prompt, f"{datetime.datetime.now()}"))
+#sqlitedb_client.commit()
+
+#Burada user a iki seçenek sunuyorum. yeni bir konuşma başlat ya da eski bir konuşmadan devam et
 print()
 print("-----------------------------------------------------------------------------------")
 print()
 x = input("Yeni bir konuşma başlat(N) / Var olan bir konuşmadan devam et(C) : ")
 print()
 
+#eski bir konuşmadan devam etmek için C
 if x == "C" or x == "c":
 
+    #db deki idleri user a listeliyorum
     cursor.execute("SELECT id, start_date FROM conversations ORDER BY id;")
     kayitli_konusmalar = cursor.fetchall()
 
@@ -254,6 +300,7 @@ if x == "C" or x == "c":
 
     else: 
         for document in kayitli_konusmalar :
+
             print(f"ID: {document[0]} - Başlangıç Tarihi : {document[1]}")
 
         prefer_id = input("\nDevam etkme istediğiniz konuşmanın ID sini giriniz : ")    
@@ -311,8 +358,9 @@ if x == "C" or x == "c":
         messages.append({"role": "assistant", "content": llm_answer})
         cursor.execute("INSERT INTO messages (conversation_id, role, content, timestamp) VALUES (?,?,?,?)", (current_conversation_id, "assistant", llm_answer, f"{datetime.datetime.now()}"))
         sqlitedb_client.commit()
+             
 
-
+#yeni bir konuşma başlatmak için
 else:    
     dt = str(datetime.datetime.now())
     cursor.execute("INSERT INTO conversations (user_id, start_date) VALUES (?,?)", (1,dt))
@@ -329,7 +377,7 @@ else:
         user_input = input("Nasıl yardımcı olabilirim? (Çıkmak için Q yazınız): ")
 
         if user_input == "Q" or user_input == "q":
-            print("Çıkış Yapılıyor..s")
+            print("Çıkış Yapılıyor..")
             break
             
 
@@ -372,3 +420,4 @@ else:
         messages.append({"role": "assistant", "content": llm_answer})
         cursor.execute("INSERT INTO messages (conversation_id, role, content, timestamp) VALUES (?,?,?,?)", (current_conversation_id, "assistant", llm_answer, f"{datetime.datetime.now()}"))
         sqlitedb_client.commit()
+             
