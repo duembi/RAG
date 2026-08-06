@@ -163,3 +163,6 @@ Girdi verisi, Sanayi ve Teknoloji Bakanlığı'na ait dönemsel OSB/parsel tablo
 ## Sınırlamalar
 
 Bu proje geliştirme/deneme aşamasındadır ve yalnızca iç kullanım amaçlıdır. LLM yalnızca kendisine verilen bağlam belgelerine dayanarak cevap verecek şekilde yönlendirilmiştir; bağlamda karşılık bulamadığı sorularda halüsinasyon üretmek yerine "bu sorunun cevabı elimdeki belgelere göre verilemiyor" yanıtını döndürür.
+
+<img width="4098" height="8191" alt="architecture" src="https://github.com/user-attachments/assets/94d2c7db-94f7-4f05-ae61-faad678efc0b" />
+
