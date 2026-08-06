@@ -14,7 +14,7 @@ The system consists of two separate pipelines:
 
 Conversation state and message history are stored in SQLite (`chatbot.db`), while vectors live in a ChromaDB `PersistentClient` (collection `rag_chunks`).
 
-<img width="500" alt="architecture" src="https://github.com/user-attachments/assets/f50d66f7-9fed-4cd8-a4b9-e48f1c47c8b8" />
+<img width="600" alt="architecture" src="https://github.com/user-attachments/assets/f50d66f7-9fed-4cd8-a4b9-e48f1c47c8b8" />
 
 ## Project Stages
 
@@ -99,7 +99,7 @@ Sistem iki ayrı hattan oluşur:
 
 Konuşma geçmişi ve mesajlar SQLite (`chatbot.db`) içinde, vektörler ise ChromaDB `PersistentClient` (`rag_chunks` koleksiyonu) içinde saklanır.
 
-<img width="500" alt="mimari" src="https://github.com/user-attachments/assets/8b4d2bf0-0190-4bb6-96f3-31493b25e938" />
+<img width="600" alt="mimari" src="https://github.com/user-attachments/assets/8b4d2bf0-0190-4bb6-96f3-31493b25e938" />
 
 ## Proje Aşamaları
 
