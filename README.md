@@ -14,7 +14,8 @@ The system consists of two separate pipelines:
 
 Conversation state and message history are stored in SQLite (`chatbot.db`), while vectors live in a ChromaDB `PersistentClient` (collection `rag_chunks`).
 
-![Architecture Diagram](architecture.png)
+![Architecture Diagram](<img width="4098" height="8191" alt="architecture" src="https://github.com/user-attachments/assets/f50d66f7-9fed-4cd8-a4b9-e48f1c47c8b8" />
+)
 
 ## Project Stages
 
@@ -98,7 +99,8 @@ Sistem iki ayrı hattan oluşur:
 
 Konuşma geçmişi ve mesajlar SQLite (`chatbot.db`) içinde, vektörler ise ChromaDB `PersistentClient` (`rag_chunks` koleksiyonu) içinde saklanır.
 
-![Mimari Diyagram](architecture.png)
+![Mimari Diyagram](<img width="4098" height="8191" alt="architecture" src="https://github.com/user-attachments/assets/8b4d2bf0-0190-4bb6-96f3-31493b25e938" />
+)
 
 ## Proje Aşamaları
 
@@ -160,4 +162,4 @@ Girdi verisi, Sanayi ve Teknoloji Bakanlığı'na ait dönemsel OSB/parsel tablo
 
 ## Sınırlamalar
 
-Bu proje geliştirme/deneme aşamasındadır ve yalnızca iç kullanım amaçlıdır. LLM yalnızca kendisine verilen bağlam belgelerine dayanarak cevap verecek şekilde yönlendirilmiştir; bağlamda karşılık bulamadığı sorularda halüsinasyon üretmek yerine "bu sorunun cevabı elimdeki belgelere göre verilemiyor" yanıtını döndürür.<img width="4098" height="8191" alt="architecture" src="https://github.com/user-attachments/assets/2177f239-8dda-48b4-947d-50db123fed85" />
+Bu proje geliştirme/deneme aşamasındadır ve yalnızca iç kullanım amaçlıdır. LLM yalnızca kendisine verilen bağlam belgelerine dayanarak cevap verecek şekilde yönlendirilmiştir; bağlamda karşılık bulamadığı sorularda halüsinasyon üretmek yerine "bu sorunun cevabı elimdeki belgelere göre verilemiyor" yanıtını döndürür.
