@@ -14,7 +14,7 @@ The system consists of two separate pipelines:
 
 Conversation state and message history are stored in SQLite (`chatbot.db`), while vectors live in a ChromaDB `PersistentClient` (collection `rag_chunks`).
 
-![Architecture Diagram](<img width="4098" height="8191" alt="architecture" src="https://github.com/user-attachments/assets/f50d66f7-9fed-4cd8-a4b9-e48f1c47c8b8" />
+![Architecture Diagram]![Architecture Diagram](<img width="4098" height="8191" alt="architecture" src="https://github.com/user-attachments/assets/f50d66f7-9fed-4cd8-a4b9-e48f1c47c8b8" />
 )
 
 ## Project Stages
